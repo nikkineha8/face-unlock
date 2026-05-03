@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
+</head>
+<body>
+
+<h2>Face Unlock</h2>
+
+<video id="webcam" autoplay playsinline width="300"></video>
+
+<p id="result">Click Start to begin</p>
+
+<button onclick="init()">Start Camera</button>
+
+<script>
+const URL = "https://teachablemachine.withgoogle.com/models/8G6rrA6BT/";
+
+let model, webcam;
+
+async function init() {
+  model = await tmImage.load(URL + "model.json", URL + "metadata.json");
+
+  webcam = new tmImage.Webcam(300, 300, true);
+  await webcam.setup();
+  await webcam.play();
+
+  document.getElementById("webcam").srcObject = webcam.webcam;
+
+  loop();
+}
+
+async function loop() {
+  webcam.update();
+
+  const prediction = await model.predict(webcam.canvas);
+
+  let best = prediction[0];
+  for (let i = 1; i < prediction.length; i++) {
+    if (prediction[i].probability > best.probability) {
+      best = prediction[i];
+    }
+  }
+
+  document.getElementById("result").innerText =
+    best.className + " (" + (best.probability * 100).toFixed(1) + "%)";
+
+  // SEND RESULT TO THUNKABLE
+  if (window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(best.className);
+  }
+
+  requestAnimationFrame(loop);
+}
+</script>
+
+</body>
+</html>
